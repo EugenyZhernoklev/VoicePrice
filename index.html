@@ -22,6 +22,7 @@
     <h1>Vocal Price App</h1>
     <input type="file" id="priceFile" accept=".csv,.xlsx">
     <button onclick="loadPrice()">Загрузить прайс</button>
+    <button onclick="clearStorage()">Очистить сохранённый прайс</button>
     <label>
         <input type="checkbox" id="priceOnly" checked> Только цена (без названия лота)
     </label>
@@ -88,6 +89,12 @@
             rateValue.textContent = rateSlider.value;
         });
 
+        function clearStorage() {
+            localStorage.removeItem('priceDict');
+            priceDict = {};
+            document.getElementById('status').textContent = 'Сохранённый прайс очищен. Загрузите новый.';
+        }
+
         function loadPrice() {
             const file = document.getElementById('priceFile').files[0];
             if (!file) return alert('Выберите файл');
@@ -124,7 +131,7 @@
                 if (row.lot_number) {
                     const lot = String(row.lot_number).replace(/\.0$/, '');
                     const price = Math.round(row.price || 0);
-                    const productionCost = Math.round(row['Production Cost'] || 0);  // Новая колонка
+                    const productionCost = Math.round(row['Production Cost'] || 0);
                     priceDict[lot] = {name: row.name, price: price, productionCost: productionCost};
                 }
             });
@@ -167,15 +174,17 @@
                 response += `Стоимость: ${price} рублей.`;
                 let displayText = `Название лота: ${name}`;
                 if (productionCost > price) {
-                    response = `Внимание, производство дороже!!! ${response}`;
+                    speak('Внимание, производство дороже!!!');
+                    setTimeout(() => speak(response), 1000);  // Пауза 1 сек
                     displayText += ` <span class="red">Production Cost: ${productionCost}</span>`;
+                } else {
+                    speak(response);
                 }
                 responseCount++;
                 if (document.getElementById('compliments').checked && responseCount % 4 === 0) {
                     const compliment = compliments[Math.floor(Math.random() * compliments.length)];
-                    response += ` ${compliment}`;
+                    setTimeout(() => speak(compliment), 2000);  // Пауза 2 сек перед комплиментом
                 }
-                speak(response);
                 document.getElementById('lotDisplay').innerHTML = displayText;
             } else {
                 speak(`Лот ${lotNumber} не найден.`);

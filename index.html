@@ -15,6 +15,7 @@
         label { display: block; margin: 10px; }
         #lotDisplay { margin: 20px; padding: 10px; border: 1px solid #ccc; background-color: #fff; min-height: 50px; font-size: 16px; word-wrap: break-word; }
         input[type="range"] { width: 80%; }
+        footer { font-size: 12px; color: #666; margin-top: 20px; padding: 10px; border-top: 1px solid #ccc; }
     </style>
 </head>
 <body>
@@ -25,7 +26,7 @@
         <input type="checkbox" id="priceOnly" checked> Только цена (без названия лота)
     </label>
     <label>
-        <input type="checkbox" id="compliments"> Комплименты каждый 5-й ответ
+        <input type="checkbox" id="compliments"> Комплименты каждый 4-й ответ
     </label>
     <label>
         Скорость произношения:
@@ -36,6 +37,10 @@
     <button onclick="stopListening()">Остановить</button>
     <p id="status">Статус: Загрузи прайс</p>
     <div id="lotDisplay">Название лота появится здесь</div>
+
+    <footer>
+        Разработано Helen, версия 1.0
+    </footer>
 
     <script>
         const tg = window.Telegram.WebApp;
@@ -53,12 +58,28 @@
         let responseCount = 0;
         const debounceTime = 1500;
         const compliments = [
-            "Ты выглядишь потрясающе!",
-            "Твоя улыбка освещает всё вокруг!",
-            "Ты невероятно умна и талантлива!",
-            "С тобой всегда так приятно!",
-            "Ты самая прекрасная девушка на свете!"
+            "Твои глаза — океан, в котором я тону с удовольствием.",
+            "Твоя улыбка — это солнечный свет в моей жизни.",
+            "С тобой каждый момент становится волшебным.",
+            "Ты — моя муза, вдохновляющая на новые высоты.",
+            "Твоё прикосновение заставляет моё сердце биться чаще.",
+            "Ты — воплощение всех моих мечт.",
+            "В твоих объятиях я нахожу свой рай.",
+            "Твоя красота затмевает звёзды на небе.",
+            "С тобой я чувствую себя самым счастливым человеком.",
+            "Твоя нежность — это бальзам для моей души.",
+            "Ты — любовь моей жизни, моя вечная весна.",
+            "Каждый день с тобой — как романтическое приключение.",
+            "Твои губы — самый сладкий нектар.",
+            "Ты делаешь мой мир ярче и теплее.",
+            "В тебе — вся магия любви и страсти."
         ];
+
+        // Загрузка сохранённого прайса из localStorage при запуске
+        if (localStorage.getItem('priceDict')) {
+            priceDict = JSON.parse(localStorage.getItem('priceDict'));
+            document.getElementById('status').textContent = 'Прайс загружен из памяти!';
+        }
 
         // Обновление значения скорости
         const rateSlider = document.getElementById('speechRate');
@@ -89,6 +110,7 @@
                         processData(json);
                     }
                     document.getElementById('status').textContent = 'Прайс загружен!';
+                    localStorage.setItem('priceDict', JSON.stringify(priceDict));  // Сохраняем в память
                 } catch (err) {
                     alert('Ошибка загрузки: ' + err.message);
                 }
@@ -129,9 +151,11 @@
             if (currentTime - lastResultTime < debounceTime) return;
             lastResultTime = currentTime;
 
-            const text = event.results[event.results.length - 1][0].transcript.toLowerCase().replace('лот', '').trim();
-            const words = text.split(' ');
-            let lotNumber = words.map(russianWordToNumber).join('');
+            let text = event.results[event.results.length - 1][0].transcript.toLowerCase().replace('лот', '').trim();
+            // Обработка точек (замена 'точка' на '.')
+            text = text.replace(/точка/g, '.');
+            const words = text.split(/[\s-]/);  // Разделяем по пробелам и дефисам
+            let lotNumber = words.map(russianWordToNumber).join('.');  // Склеиваем с '.', чтобы поддерживать 1.1
             document.getElementById('status').textContent = `Распознано: ${text} (очищено: ${lotNumber})`;
 
             if (lotNumber in priceDict) {
@@ -142,7 +166,7 @@
                 }
                 response += `Стоимость: ${price} рублей.`;
                 responseCount++;
-                if (document.getElementById('compliments').checked && responseCount % 5 === 0) {
+                if (document.getElementById('compliments').checked && responseCount % 4 === 0) {
                     const compliment = compliments[Math.floor(Math.random() * compliments.length)];
                     response += ` ${compliment}`;
                 }

@@ -12,12 +12,16 @@
         button { padding: 10px 20px; margin: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
         input { margin: 10px; }
         #status { color: #333; }
+        label { display: block; margin: 10px; }
     </style>
 </head>
 <body>
     <h1>Vocal Price App</h1>
     <input type="file" id="priceFile" accept=".csv,.xlsx">
     <button onclick="loadPrice()">Загрузить прайс</button>
+    <label>
+        <input type="checkbox" id="priceOnly" checked> Только цена (без названия лота)
+    </label>
     <button onclick="startListening()">Начать прослушивание</button>
     <button onclick="stopListening()">Остановить</button>
     <p id="status">Статус: Загрузи прайс</p>
@@ -30,12 +34,12 @@
         let priceDict = {};
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'ru-RU';
-        recognition.continuous = true;
+        recognition.continuous = false;  // Отключаем continuous, чтобы избежать дубликатов
         recognition.interimResults = false;
 
-        let isListening = false;  // Флаг для контроля прослушивания
+        let isListening = false;
         let lastResultTime = 0;
-        const debounceTime = 1000;
+        const debounceTime = 1500;  // Увеличили задержку
 
         function loadPrice() {
             const file = document.getElementById('priceFile').files[0];
@@ -81,13 +85,17 @@
             if (isListening) return;
             isListening = true;
             document.getElementById('status').textContent = 'Прослушивание... Говори номер лота.';
-            recognition.start();
+            listenOnce();
         }
 
         function stopListening() {
             isListening = false;
-            recognition.stop();
+            recognition.abort();  // Полная остановка
             document.getElementById('status').textContent = 'Прослушивание остановлено.';
+        }
+
+        function listenOnce() {
+            recognition.start();
         }
 
         recognition.onresult = function(event) {
@@ -102,7 +110,11 @@
 
             if (lotNumber in priceDict) {
                 const {name, price} = priceDict[lotNumber];
-                const response = `Лот ${lotNumber}: ${name}. Стоимость: ${price} рублей.`;
+                let response = `Лот ${lotNumber}: `;
+                if (!document.getElementById('priceOnly').checked) {
+                    response += `${name}. `;
+                }
+                response += `Стоимость: ${price} рублей.`;
                 speak(response);
             } else {
                 speak(`Лот ${lotNumber} не найден.`);
@@ -112,13 +124,13 @@
         recognition.onerror = function(event) {
             document.getElementById('status').textContent = 'Ошибка: ' + event.error;
             if (isListening && (event.error === 'no-speech' || event.error === 'audio-capture')) {
-                setTimeout(() => recognition.start(), 1000);
+                setTimeout(listenOnce, 1000);
             }
         };
 
         recognition.onend = function() {
             if (isListening) {
-                setTimeout(() => recognition.start(), 1000);
+                setTimeout(listenOnce, 1000);
             }
         };
 

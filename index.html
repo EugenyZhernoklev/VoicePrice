@@ -31,7 +31,11 @@
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'ru-RU';
         recognition.continuous = true;
-        recognition.interimResults = true;  // Промежуточные результаты для лучшего распознавания
+        recognition.interimResults = false;
+
+        let isListening = false;  // Флаг для контроля прослушивания
+        let lastResultTime = 0;
+        const debounceTime = 1000;
 
         function loadPrice() {
             const file = document.getElementById('priceFile').files[0];
@@ -74,16 +78,23 @@
         }
 
         function startListening() {
+            if (isListening) return;
+            isListening = true;
             document.getElementById('status').textContent = 'Прослушивание... Говори номер лота.';
             recognition.start();
         }
 
         function stopListening() {
+            isListening = false;
             recognition.stop();
             document.getElementById('status').textContent = 'Прослушивание остановлено.';
         }
 
         recognition.onresult = function(event) {
+            const currentTime = Date.now();
+            if (currentTime - lastResultTime < debounceTime) return;
+            lastResultTime = currentTime;
+
             const text = event.results[event.results.length - 1][0].transcript.toLowerCase().replace('лот', '').trim();
             const words = text.split(' ');
             let lotNumber = words.map(russianWordToNumber).join('');
@@ -96,25 +107,25 @@
             } else {
                 speak(`Лот ${lotNumber} не найден.`);
             }
-            recognition.stop();  // Стоп после обработки
-            setTimeout(() => recognition.start(), 1000);  // Авто-реstart через 1 сек
         };
 
         recognition.onerror = function(event) {
             document.getElementById('status').textContent = 'Ошибка: ' + event.error;
-            if (event.error === 'no-speech' || event.error === 'audio-capture') {
-                setTimeout(() => recognition.start(), 1000);  // Restart при ошибке
+            if (isListening && (event.error === 'no-speech' || event.error === 'audio-capture')) {
+                setTimeout(() => recognition.start(), 1000);
             }
         };
 
         recognition.onend = function() {
-            setTimeout(() => recognition.start(), 1000);  // Непрерывный restart
+            if (isListening) {
+                setTimeout(() => recognition.start(), 1000);
+            }
         };
 
         function speak(text) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ru-RU';
-            utterance.rate = 1.0;
+            utterance.rate = 1.5;
             speechSynthesis.speak(utterance);
         }
 

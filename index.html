@@ -34,9 +34,6 @@
         <input type="checkbox" id="priceOnly" checked> Только цена (без названия лота)
     </label>
     <label>
-        <input type="checkbox" id="compliments"> Комплименты каждый 4-й ответ
-    </label>
-    <label>
         Скорость произношения:
         <input type="range" id="speechRate" min="0.5" max="1.5" step="0.1" value="1.5">
         <span id="rateValue">1.5</span>
@@ -73,25 +70,7 @@
 
         let isListening = false;
         let lastResultTime = 0;
-        let responseCount = 0;
         const debounceTime = 1500;
-        const compliments = [
-            "Твои глаза — океан, в котором я тону с удовольствием.",
-            "Твоя улыбка — это солнечный свет в моей жизни.",
-            "С тобой каждый момент становится волшебным.",
-            "Ты — моя муза, вдохновляющая на новые высоты.",
-            "Твоё прикосновение заставляет моё сердце биться чаще.",
-            "Ты — воплощение всех моих мечт.",
-            "В твоих объятиях я нахожу свой рай.",
-            "Твоя красота затмевает звёзды на небе.",
-            "С тобой я чувствую себя самым счастливым человеком.",
-            "Твоя нежность — это бальзам для моей души.",
-            "Ты — любовь моей жизни, моя вечная весна.",
-            "Каждый день с тобой — как романтическое приключение.",
-            "Твои губы — самый сладкий нектар.",
-            "Ты делаешь мой мир ярче и теплее.",
-            "В тебе — вся магия любви и страсти."
-        ];
 
         // Загрузка сохранённого прайса из localStorage при запуске
         if (localStorage.getItem('priceDict')) {
@@ -209,10 +188,6 @@
                     speak(response);
                 }
                 responseCount++;
-                if (document.getElementById('compliments').checked && responseCount % 4 === 0) {
-                    const compliment = compliments[Math.floor(Math.random() * compliments.length)];
-                    setTimeout(() => speak(compliment), 2000);  // Пауза 2 сек перед комплиментом
-                }
                 document.getElementById('lotDisplay').innerHTML = displayText;
             } else {
                 speak(`Лот ${lotNumber} не найден.`);

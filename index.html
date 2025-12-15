@@ -185,7 +185,7 @@
                 if (!document.getElementById('priceOnly').checked) {
                     response += `${name}. `;
                 }
-                response += `Стоимость: ${price} рублей.`;
+                response += `${price} рублей.`;
                 let displayText = `Название лота: ${name}`;
                 if (productionCost > price) {
                     speak('Внимание, производство дороже!!!');

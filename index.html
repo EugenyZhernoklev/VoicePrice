@@ -3,29 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>VocalLot</title>
+    <title>Vocal Price App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: Arial; padding: 10px; text-align: center; background-color: #f0f0f0; -webkit-user-select: none; user-select: none; }
-        h1 { color: #007bff; }
-        button { padding: 10px 20px; margin: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button { padding: 10px 20px; margin: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; touch-action: manipulation; }  /* Фикс для touch on iOS */
         input { margin: 10px; }
-        #status { color: #333; font-weight: bold; }
-        label { display: block; margin: 10px; color: #555; }
-        #lotDisplay { margin: 20px; padding: 10px; border: 1px solid #ccc; background-color: #fff; min-height: 50px; font-size: 16px; word-wrap: break-word; border-radius: 5px; }
+        #status { color: #333; }
+        label { display: block; margin: 10px; }
+        #lotDisplay { margin: 20px; padding: 10px; border: 1px solid #ccc; background-color: #fff; min-height: 50px; font-size: 16px; word-wrap: break-word; }
         input[type="range"] { width: 80%; }
         .red { color: red; font-weight: bold; }
         footer { font-size: 12px; color: #666; margin-top: 20px; padding: 10px; border-top: 1px solid #ccc; }
-        i { margin-right: 5px; }
     </style>
 </head>
 <body>
-    <h1><i class="fas fa-microphone"></i> VocalLot</h1>
+    <h1>Vocal Price App</h1>
     <input type="file" id="priceFile" accept=".csv,.xlsx">
-    <button onclick="loadPrice()"><i class="fas fa-upload"></i> Загрузить прайс</button>
+    <button onclick="loadPrice()">Загрузить прайс</button>
     <label>
         <input type="checkbox" id="priceOnly" checked> Только цена (без названия лота)
     </label>
@@ -33,21 +30,192 @@
         <input type="checkbox" id="compliments"> Комплименты каждый 4-й ответ
     </label>
     <label>
-        <i class="fas fa-tachometer-alt"></i> Скорость произношения:
+        Скорость произношения:
         <input type="range" id="speechRate" min="0.5" max="1.5" step="0.1" value="1.5">
         <span id="rateValue">1.5</span>
     </label>
-    <button onclick="startListening()"><i class="fas fa-play"></i> Начать прослушивание</button>
-    <button onclick="stopListening()"><i class="fas fa-stop"></i> Остановить</button>
+    <button onclick="startListening()">Начать прослушивание</button>
+    <button onclick="stopListening()">Остановить</button>
     <p id="status">Статус: Загрузи прайс</p>
     <div id="lotDisplay">Название лота появится здесь</div>
 
     <footer>
-        Разработано UGN, версия 1.0
+        Разработано UGN для Optimum, версия 1.0
+        <br>
+        <img src="logo.png" alt="Optimum Logo" style="width: 200px; margin-top: 10px;">
     </footer>
 
     <script>
-        // (остальной код без изменений, как в предыдущем сообщении)
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        let priceDict = {};
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'ru-RU';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        let isListening = false;
+        let lastResultTime = 0;
+        let responseCount = 0;
+        const debounceTime = 1500;
+        const compliments = [
+            "Твои глаза — океан, в котором я тону с удовольствием.",
+            "Твоя улыбка — это солнечный свет в моей жизни.",
+            "С тобой каждый момент становится волшебным.",
+            "Ты — моя муза, вдохновляющая на новые высоты.",
+            "Твоё прикосновение заставляет моё сердце биться чаще.",
+            "Ты — воплощение всех моих мечт.",
+            "В твоих объятиях я нахожу свой рай.",
+            "Твоя красота затмевает звёзды на небе.",
+            "С тобой я чувствую себя самым счастливым человеком.",
+            "Твоя нежность — это бальзам для моей души.",
+            "Ты — любовь моей жизни, моя вечная весна.",
+            "Каждый день с тобой — как романтическое приключение.",
+            "Твои губы — самый сладкий нектар.",
+            "Ты делаешь мой мир ярче и теплее.",
+            "В тебе — вся магия любви и страсти."
+        ];
+
+        // Загрузка сохранённого прайса из localStorage при запуске
+        if (localStorage.getItem('priceDict')) {
+            priceDict = JSON.parse(localStorage.getItem('priceDict'));
+            document.getElementById('status').textContent = 'Прайс загружен из памяти!';
+        }
+
+        // Обновление значения скорости
+        const rateSlider = document.getElementById('speechRate');
+        const rateValue = document.getElementById('rateValue');
+        rateSlider.addEventListener('input', () => {
+            rateValue.textContent = rateSlider.value;
+        });
+
+        function loadPrice() {
+            const file = document.getElementById('priceFile').files[0];
+            if (!file) return alert('Выберите файл');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    if (file.name.endsWith('.csv')) {
+                        Papa.parse(e.target.result, {
+                            header: true,
+                            complete: function(results) {
+                                processData(results.data);
+                            }
+                        });
+                    } else if (file.name.endsWith('.xlsx')) {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const sheet = workbook.Sheets['Прайс-лист'] || workbook.Sheets[workbook.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(sheet);
+                        processData(json);
+                    }
+                    document.getElementById('status').textContent = 'Прайс загружен!';
+                    localStorage.setItem('priceDict', JSON.stringify(priceDict));  // Сохраняем в память
+                } catch (err) {
+                    alert('Ошибка загрузки: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processData(data) {
+            priceDict = {};
+            data.forEach(row => {
+                if (row.lot_number) {
+                    const lot = String(row.lot_number).replace(/\.0$/, '');
+                    const price = Math.round(row.price || 0);
+                    const productionCost = Math.round(row['Production Cost'] || 0);
+                    priceDict[lot] = {name: row.name, price: price, productionCost: productionCost};
+                }
+            });
+        }
+
+        function startListening() {
+            if (isListening) return;
+            isListening = true;
+            document.getElementById('status').textContent = 'Прослушивание... Говори номер лота.';
+            listenOnce();
+        }
+
+        function stopListening() {
+            isListening = false;
+            recognition.abort();
+            document.getElementById('status').textContent = 'Прослушивание остановлено.';
+        }
+
+        function listenOnce() {
+            recognition.start();
+        }
+
+        recognition.onresult = function(event) {
+            const currentTime = Date.now();
+            if (currentTime - lastResultTime < debounceTime) return;
+            lastResultTime = currentTime;
+
+            let text = event.results[event.results.length - 1][0].transcript.toLowerCase().replace('лот', '').trim();
+            text = text.replace(/точка/g, '.');
+            const words = text.split(/[\s-]/);
+            let lotNumber = words.map(russianWordToNumber).join('.');
+            document.getElementById('status').textContent = `Распознано: ${text} (очищено: ${lotNumber})`;
+
+            if (lotNumber in priceDict) {
+                const {name, price, productionCost} = priceDict[lotNumber];
+                let response = `Лот ${lotNumber}: `;
+                if (!document.getElementById('priceOnly').checked) {
+                    response += `${name}. `;
+                }
+                response += `Стоимость: ${price} рублей.`;
+                let displayText = `Название лота: ${name}`;
+                if (productionCost > price) {
+                    speak('Внимание, производство дороже!!!');
+                    setTimeout(() => speak(response), 1000);  // Пауза 1 сек
+                    displayText += ` <span class="red">Production Cost: ${productionCost}</span>`;
+                } else {
+                    speak(response);
+                }
+                responseCount++;
+                if (document.getElementById('compliments').checked && responseCount % 4 === 0) {
+                    const compliment = compliments[Math.floor(Math.random() * compliments.length)];
+                    setTimeout(() => speak(compliment), 2000);  // Пауза 2 сек перед комплиментом
+                }
+                document.getElementById('lotDisplay').innerHTML = displayText;
+            } else {
+                speak(`Лот ${lotNumber} не найден.`);
+                document.getElementById('lotDisplay').textContent = 'Лот не найден';
+            }
+        };
+
+        recognition.onerror = function(event) {
+            document.getElementById('status').textContent = 'Ошибка: ' + event.error;
+            if (isListening && (event.error === 'no-speech' || event.error === 'audio-capture')) {
+                setTimeout(listenOnce, 1000);
+            }
+        };
+
+        recognition.onend = function() {
+            if (isListening) {
+                setTimeout(listenOnce, 1000);
+            }
+        };
+
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ru-RU';
+            utterance.rate = parseFloat(document.getElementById('speechRate').value);
+            speechSynthesis.speak(utterance);
+        }
+
+        function russianWordToNumber(word) {
+            const map = {
+                'ноль': '0', 'один': '1', 'два': '2', 'три': '3', 'четыре': '4', 'пять': '5',
+                'шесть': '6', 'семь': '7', 'восемь': '8', 'девять': '9', 'десять': '10',
+                // Добавь больше, если нужно
+            };
+            return map[word] || word;
+        }
     </script>
 </body>
 </html>

@@ -49,7 +49,7 @@
     <div id="lotDisplay">Название лота появится здесь</div>
 
     <footer>
-        Разработано UGN, версия 1.22
+        Разработано UGN, версия 1.23
         <img id="logo" src="logo.png" alt="Optimum Logo">
     </footer>
 
@@ -101,10 +101,10 @@
             localStorage.setItem('speechRate', rateSlider.value);
         });
 
-        // Выбор голоса (только ru-RU)
+        // Выбор голоса (все, но с фильтром ru-RU если есть)
         const voiceSelect = document.getElementById('voiceSelect');
         function loadVoices() {
-            const voices = speechSynthesis.getVoices().filter(voice => voice.lang === 'ru-RU');
+            const voices = speechSynthesis.getVoices();
             voiceSelect.innerHTML = '';
             voices.forEach((voice, index) => {
                 const option = document.createElement('option');
@@ -112,6 +112,13 @@
                 option.value = index;
                 voiceSelect.appendChild(option);
             });
+            // Если есть ru-RU, выбрать по умолчанию
+            for (let i = 0; i < voiceSelect.options.length; i++) {
+                if (voiceSelect.options[i].textContent.includes('ru-RU')) {
+                    voiceSelect.value = i;
+                    break;
+                }
+            }
         }
         speechSynthesis.addEventListener('voiceschanged', loadVoices);
         loadVoices();

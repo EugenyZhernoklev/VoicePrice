@@ -13,6 +13,7 @@
         input { margin: 10px; }
         #status { color: #333; }
         label { display: block; margin: 10px; }
+        #lotDisplay { margin: 20px; padding: 10px; border: 1px solid #ccc; background-color: #fff; min-height: 50px; }
     </style>
 </head>
 <body>
@@ -22,9 +23,15 @@
     <label>
         <input type="checkbox" id="priceOnly" checked> Только цена (без названия лота)
     </label>
+    <label>
+        Скорость произношения:
+        <input type="range" id="speechRate" min="0.5" max="2" step="0.1" value="1.5">
+        <span id="rateValue">1.5</span>
+    </label>
     <button onclick="startListening()">Начать прослушивание</button>
     <button onclick="stopListening()">Остановить</button>
     <p id="status">Статус: Загрузи прайс</p>
+    <div id="lotDisplay">Название лота появится здесь</div>
 
     <script>
         const tg = window.Telegram.WebApp;
@@ -34,12 +41,19 @@
         let priceDict = {};
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'ru-RU';
-        recognition.continuous = false;  // Отключаем continuous, чтобы избежать дубликатов
+        recognition.continuous = false;
         recognition.interimResults = false;
 
         let isListening = false;
         let lastResultTime = 0;
-        const debounceTime = 1500;  // Увеличили задержку
+        const debounceTime = 1500;
+
+        // Обновление значения скорости
+        const rateSlider = document.getElementById('speechRate');
+        const rateValue = document.getElementById('rateValue');
+        rateSlider.addEventListener('input', () => {
+            rateValue.textContent = rateSlider.value;
+        });
 
         function loadPrice() {
             const file = document.getElementById('priceFile').files[0];
@@ -90,7 +104,7 @@
 
         function stopListening() {
             isListening = false;
-            recognition.abort();  // Полная остановка
+            recognition.abort();
             document.getElementById('status').textContent = 'Прослушивание остановлено.';
         }
 
@@ -116,8 +130,10 @@
                 }
                 response += `Стоимость: ${price} рублей.`;
                 speak(response);
+                document.getElementById('lotDisplay').textContent = `Название лота: ${name}`;
             } else {
                 speak(`Лот ${lotNumber} не найден.`);
+                document.getElementById('lotDisplay').textContent = 'Лот не найден';
             }
         };
 
@@ -137,7 +153,7 @@
         function speak(text) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ru-RU';
-            utterance.rate = 1.5;
+            utterance.rate = parseFloat(document.getElementById('speechRate').value);
             speechSynthesis.speak(utterance);
         }
 

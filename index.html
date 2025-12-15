@@ -15,7 +15,7 @@
         label { display: block; margin: 10px; }
         #lotDisplay { margin: 20px; padding: 10px; border: 1px solid #ccc; background-color: #fff; min-height: 50px; font-size: 16px; word-wrap: break-word; }
         input[type="range"] { width: 80%; }
-        footer { font-size: 12px; color: #666; margin-top: 20px; padding: 10px; border-top: 1px solid #ccc; }
+        .red { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -39,7 +39,7 @@
     <div id="lotDisplay">Название лота появится здесь</div>
 
     <footer>
-        Разработано Helen, версия 1.0
+        Разработано UGN, версия 1.0
     </footer>
 
     <script>
@@ -124,7 +124,8 @@
                 if (row.lot_number) {
                     const lot = String(row.lot_number).replace(/\.0$/, '');
                     const price = Math.round(row.price || 0);
-                    priceDict[lot] = {name: row.name, price: price};
+                    const productionCost = Math.round(row['Production Cost'] || 0);  // Новая колонка
+                    priceDict[lot] = {name: row.name, price: price, productionCost: productionCost};
                 }
             });
         }
@@ -152,26 +153,30 @@
             lastResultTime = currentTime;
 
             let text = event.results[event.results.length - 1][0].transcript.toLowerCase().replace('лот', '').trim();
-            // Обработка точек (замена 'точка' на '.')
             text = text.replace(/точка/g, '.');
-            const words = text.split(/[\s-]/);  // Разделяем по пробелам и дефисам
-            let lotNumber = words.map(russianWordToNumber).join('.');  // Склеиваем с '.', чтобы поддерживать 1.1
+            const words = text.split(/[\s-]/);
+            let lotNumber = words.map(russianWordToNumber).join('.');
             document.getElementById('status').textContent = `Распознано: ${text} (очищено: ${lotNumber})`;
 
             if (lotNumber in priceDict) {
-                const {name, price} = priceDict[lotNumber];
+                const {name, price, productionCost} = priceDict[lotNumber];
                 let response = `Лот ${lotNumber}: `;
                 if (!document.getElementById('priceOnly').checked) {
                     response += `${name}. `;
                 }
                 response += `Стоимость: ${price} рублей.`;
+                let displayText = `Название лота: ${name}`;
+                if (productionCost > price) {
+                    response = `Внимание, производство дороже!!! ${response}`;
+                    displayText += ` <span class="red">Production Cost: ${productionCost}</span>`;
+                }
                 responseCount++;
                 if (document.getElementById('compliments').checked && responseCount % 4 === 0) {
                     const compliment = compliments[Math.floor(Math.random() * compliments.length)];
                     response += ` ${compliment}`;
                 }
                 speak(response);
-                document.getElementById('lotDisplay').textContent = `Название лота: ${name}`;
+                document.getElementById('lotDisplay').innerHTML = displayText;
             } else {
                 speak(`Лот ${lotNumber} не найден.`);
                 document.getElementById('lotDisplay').textContent = 'Лот не найден';

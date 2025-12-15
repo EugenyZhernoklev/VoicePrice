@@ -104,7 +104,7 @@
         function speak(text) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ru-RU';
-            utterance.rate = 1.5;  // Ускорение
+            utterance.rate = 1;  // Ускорение
             speechSynthesis.speak(utterance);
         }
 
@@ -118,4 +118,5 @@
         }
     </script>
 </body>
+
 </html>

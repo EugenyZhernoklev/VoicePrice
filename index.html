@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial; padding: 10px; text-align: center; background-color: #f0f0f0; -webkit-user-select: none; user-select: none; }
-        button { padding: 10px 20px; margin: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; touch-action: manipulation; }  /* Фикс для touch on iOS */
+        button { padding: 10px 20px; margin: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; touch-action: manipulation; }
         input { margin: 10px; }
         #status { color: #333; }
         label { display: block; margin: 10px; }
@@ -17,12 +17,14 @@
         input[type="range"] { width: 80%; }
         .red { color: red; font-weight: bold; }
         footer { font-size: 12px; color: #666; margin-top: 20px; padding: 10px; border-top: 1px solid #ccc; }
+        #logo { width: 200px; margin: 10px auto; display: block; }
     </style>
 </head>
 <body>
     <h1>Vocal Price App</h1>
     <input type="file" id="priceFile" accept=".csv,.xlsx">
     <button onclick="loadPrice()">Загрузить прайс</button>
+    <button onclick="clearStorage()">Очистить сохранённый прайс</button>
     <label>
         <input type="checkbox" id="priceOnly" checked> Только цена (без названия лота)
     </label>
@@ -40,9 +42,8 @@
     <div id="lotDisplay">Название лота появится здесь</div>
 
     <footer>
-        Разработано UGN для Optimum, версия 1.0
-        <br>
-        <img src="logo.png" alt="Optimum Logo" style="width: 200px; margin-top: 10px;">
+        Разработано UGN, версия 1.0
+        <img id="logo" src="logo.png" alt="Optimum Logo">
     </footer>
 
     <script>
@@ -61,7 +62,6 @@
         let responseCount = 0;
         const debounceTime = 1500;
         const compliments = [
-            "    Помни, твой зая тебя очень сильно любит!!!.",
             "Твои глаза — океан, в котором я тону с удовольствием.",
             "Твоя улыбка — это солнечный свет в моей жизни.",
             "С тобой каждый момент становится волшебным.",
@@ -91,6 +91,23 @@
         rateSlider.addEventListener('input', () => {
             rateValue.textContent = rateSlider.value;
         });
+
+        // Загрузка сохранённой скорости
+        if (localStorage.getItem('speechRate')) {
+            rateSlider.value = localStorage.getItem('speechRate');
+            rateValue.textContent = rateSlider.value;
+        }
+
+        // Сохранение скорости при изменении
+        rateSlider.addEventListener('change', () => {
+            localStorage.setItem('speechRate', rateSlider.value);
+        });
+
+        function clearStorage() {
+            localStorage.removeItem('priceDict');
+            priceDict = {};
+            document.getElementById('status').textContent = 'Сохранённый прайс очищен. Загрузите новый.';
+        }
 
         function loadPrice() {
             const file = document.getElementById('priceFile').files[0];
@@ -220,4 +237,3 @@
     </script>
 </body>
 </html>
-

@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial; padding: 10px; text-align: center; background-color: #f0f0f0; -webkit-user-select: none; user-select: none; }
-        button { padding: 10px 20px; margin: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; touch-action: manipulation; }
+        button { padding: 10px 20px; margin: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; touch-action: manipulation; }  /* Фикс для touch on iOS */
         input { margin: 10px; }
         #status { color: #333; }
         label { display: block; margin: 10px; }
@@ -17,45 +17,34 @@
         input[type="range"] { width: 80%; }
         .red { color: red; font-weight: bold; }
         footer { font-size: 12px; color: #666; margin-top: 20px; padding: 10px; border-top: 1px solid #ccc; }
-        #logo { width: 200px; margin: 10px auto; display: block; }
-        #helpIcon { position: fixed; bottom: 10px; right: 10px; background-color: #007bff; color: white; width: 30px; height: 30px; border-radius: 50%; text-align: center; line-height: 30px; cursor: pointer; font-size: 20px; }
-        #modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        #modalContent { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; text-align: center; }
-        #closeModal { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-        #exampleImage { max-width: 100%; height: auto; }
     </style>
 </head>
 <body>
     <h1>Vocal Price App</h1>
     <input type="file" id="priceFile" accept=".csv,.xlsx">
-    <button onclick="vibrate(); loadPrice()">Загрузить прайс</button>
-    <button onclick="vibrate(); clearStorage()">Очистить сохранённый прайс</button>
+    <button onclick="loadPrice()">Загрузить прайс</button>
     <label>
         <input type="checkbox" id="priceOnly" checked> Только цена (без названия лота)
+    </label>
+    <label>
+        <input type="checkbox" id="compliments"> Комплименты каждый 4-й ответ
     </label>
     <label>
         Скорость произношения:
         <input type="range" id="speechRate" min="0.5" max="1.5" step="0.1" value="1.5">
         <span id="rateValue">1.5</span>
     </label>
-    <button onclick="vibrate(); startListening()">Начать прослушивание</button>
-    <button onclick="vibrate(); stopListening()">Остановить</button>
+    <button onclick="startListening()">Начать прослушивание</button>
+    <button onclick="stopListening()">Остановить</button>
     <p id="status">Статус: Загрузи прайс</p>
     <div id="lotDisplay">Название лота появится здесь</div>
 
     <footer>
-        Разработано UGN, версия 1.27
-        <img id="logo" src="logo.png" alt="Optimum Logo">
+        Разработано UGN для Optimum, версия 1.28
+    
+        <br>
+        <img src="logo.png" alt="Optimum Logo" style="width: 200px; margin-top: 10px;">
     </footer>
-
-    <div id="helpIcon" onclick="vibrate(); showModal()">?</div>
-
-    <div id="modal" onclick="closeModal()">
-        <div id="modalContent" onclick="event.stopPropagation();">
-            <span id="closeModal" onclick="closeModal()">&times;</span>
-            <img id="exampleImage" src="example_excel.png" alt="Образец Excel">
-        </div>
-    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
@@ -70,7 +59,25 @@
 
         let isListening = false;
         let lastResultTime = 0;
+        let responseCount = 0;
         const debounceTime = 1500;
+        const compliments = [
+            "Твои глаза — океан, в котором я тону с удовольствием.",
+            "Твоя улыбка — это солнечный свет в моей жизни.",
+            "С тобой каждый момент становится волшебным.",
+            "Ты — моя муза, вдохновляющая на новые высоты.",
+            "Твоё прикосновение заставляет моё сердце биться чаще.",
+            "Ты — воплощение всех моих мечт.",
+            "В твоих объятиях я нахожу свой рай.",
+            "Твоя красота затмевает звёзды на небе.",
+            "С тобой я чувствую себя самым счастливым человеком.",
+            "Твоя нежность — это бальзам для моей души.",
+            "Ты — любовь моей жизни, моя вечная весна.",
+            "Каждый день с тобой — как романтическое приключение.",
+            "Твои губы — самый сладкий нектар.",
+            "Ты делаешь мой мир ярче и теплее.",
+            "В тебе — вся магия любви и страсти."
+        ];
 
         // Загрузка сохранённого прайса из localStorage при запуске
         if (localStorage.getItem('priceDict')) {
@@ -84,23 +91,6 @@
         rateSlider.addEventListener('input', () => {
             rateValue.textContent = rateSlider.value;
         });
-
-        // Загрузка сохранённой скорости
-        if (localStorage.getItem('speechRate')) {
-            rateSlider.value = localStorage.getItem('speechRate');
-            rateValue.textContent = rateSlider.value;
-        }
-
-        // Сохранение скорости при изменении
-        rateSlider.addEventListener('change', () => {
-            localStorage.setItem('speechRate', rateSlider.value);
-        });
-
-        function clearStorage() {
-            localStorage.removeItem('priceDict');
-            priceDict = {};
-            document.getElementById('status').textContent = 'Сохранённый прайс очищен. Загрузите новый.';
-        }
 
         function loadPrice() {
             const file = document.getElementById('priceFile').files[0];
@@ -139,7 +129,7 @@
                     const lot = String(row.lot_number).replace(/\.0$/, '');
                     const price = Math.round(row.price || 0);
                     const productionCost = Math.round(row['Production Cost'] || 0);
-                    priceDict[lot] = {name: row.name || 'No name', price: price, productionCost: productionCost};
+                    priceDict[lot] = {name: row.name, price: price, productionCost: productionCost};
                 }
             });
         }
@@ -178,7 +168,7 @@
                 if (!document.getElementById('priceOnly').checked) {
                     response += `${name}. `;
                 }
-                response += ` ${price} рублей.`;
+                response += `Стоимость: ${price} рублей.`;
                 let displayText = `Название лота: ${name}`;
                 if (productionCost > price) {
                     speak('Внимание, производство дороже!!!');
@@ -188,6 +178,10 @@
                     speak(response);
                 }
                 responseCount++;
+                if (document.getElementById('compliments').checked && responseCount % 4 === 0) {
+                    const compliment = compliments[Math.floor(Math.random() * compliments.length)];
+                    setTimeout(() => speak(compliment), 2000);  // Пауза 2 сек перед комплиментом
+                }
                 document.getElementById('lotDisplay').innerHTML = displayText;
             } else {
                 speak(`Лот ${lotNumber} не найден.`);
@@ -223,25 +217,6 @@
             };
             return map[word] || word;
         }
-
-        function showModal() {
-            document.getElementById('modal').style.display = "block";
-        }
-
-        function closeModal() {
-            document.getElementById('modal').style.display = "none";
-        }
-
-        function vibrate() {
-            if (navigator.vibrate) {
-                navigator.vibrate(50);  // Вибрация 50 мс
-            }
-        }
-
-        // Добавь vibrate к onclick кнопок
-        document.querySelectorAll('button').forEach(btn => {
-            btn.addEventListener('click', vibrate);
-        });
     </script>
 </body>
 </html>

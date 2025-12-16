@@ -1,3 +1,4 @@
+@@ -1,236 +1,235 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -23,14 +24,13 @@
         #modalContent { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; text-align: center; }
         #closeModal { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         #exampleImage { max-width: 100%; height: auto; }
-        select { padding: 10px; margin: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
     <h1>Vocal Price App</h1>
     <input type="file" id="priceFile" accept=".csv,.xlsx">
-    <button onclick="vibrate(); loadPrice()">Загрузить прайс</button>
-    <button onclick="vibrate(); clearStorage()">Очистить сохранённый прайс</button>
+    <button onclick="loadPrice()">Загрузить прайс</button>
+    <button onclick="clearStorage()">Очистить сохранённый прайс</button>
     <label>
         <input type="checkbox" id="priceOnly" checked> Только цена (без названия лота)
     </label>
@@ -39,21 +39,17 @@
         <input type="range" id="speechRate" min="0.5" max="1.5" step="0.1" value="1.5">
         <span id="rateValue">1.5</span>
     </label>
-    <label>
-        Голос диктора:
-        <select id="voiceSelect"></select>
-    </label>
-    <button onclick="vibrate(); startListening()">Начать прослушивание</button>
-    <button onclick="vibrate(); stopListening()">Остановить</button>
+    <button onclick="startListening()">Начать прослушивание</button>
+    <button onclick="stopListening()">Остановить</button>
     <p id="status">Статус: Загрузи прайс</p>
     <div id="lotDisplay">Название лота появится здесь</div>
 
     <footer>
-        Разработано UGN, версия 1.28
+        Разработано UGN, версия 1.26
         <img id="logo" src="logo.png" alt="Optimum Logo">
     </footer>
 
-    <div id="helpIcon" onclick="vibrate(); showModal()">?</div>
+    <div id="helpIcon" onclick="showModal()">?</div>
 
     <div id="modal" onclick="closeModal()">
         <div id="modalContent" onclick="event.stopPropagation();">
@@ -99,31 +95,6 @@
         // Сохранение скорости при изменении
         rateSlider.addEventListener('change', () => {
             localStorage.setItem('speechRate', rateSlider.value);
-        });
-
-        // Выбор голоса
-        const voiceSelect = document.getElementById('voiceSelect');
-        function loadVoices() {
-            const voices = speechSynthesis.getVoices();
-            voiceSelect.innerHTML = '';
-            voices.forEach((voice, index) => {
-                const option = document.createElement('option');
-                option.textContent = voice.name + ' (' + voice.lang + ')';
-                option.value = index;
-                voiceSelect.appendChild(option);
-            });
-        }
-        speechSynthesis.addEventListener('voiceschanged', loadVoices);
-        loadVoices();
-
-        // Загрузка сохранённого голоса
-        if (localStorage.getItem('voiceIndex')) {
-            voiceSelect.value = localStorage.getItem('voiceIndex');
-        }
-
-        // Сохранение голоса при изменении
-        voiceSelect.addEventListener('change', () => {
-            localStorage.setItem('voiceIndex', voiceSelect.value);
         });
 
         function clearStorage() {
@@ -242,10 +213,6 @@
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ru-RU';
             utterance.rate = parseFloat(document.getElementById('speechRate').value);
-            const voiceIndex = localStorage.getItem('voiceIndex');
-            if (voiceIndex) {
-                utterance.voice = speechSynthesis.getVoices()[voiceIndex];
-            }
             speechSynthesis.speak(utterance);
         }
 
@@ -265,17 +232,6 @@
         function closeModal() {
             document.getElementById('modal').style.display = "none";
         }
-
-        function vibrate() {
-            if (navigator.vibrate) {
-                navigator.vibrate(50);  // Вибрация 50 мс
-            }
-        }
-
-        // Добавь vibrate к onclick кнопок
-        document.querySelectorAll('button').forEach(btn => {
-            btn.addEventListener('click', vibrate);
-        });
     </script>
 </body>
 </html>

@@ -44,7 +44,7 @@
     <div id="lotDisplay">Название лота появится здесь</div>
 
     <footer>
-        Разработано UGN, версия 2.0
+        Разработано UGN, версия 1.26
         <img id="logo" src="logo.png" alt="Optimum Logo">
     </footer>
 
@@ -139,7 +139,7 @@
                     const lot = String(row.lot_number).replace(/\.0$/, '');
                     const price = Math.round(row.price || 0);
                     const productionCost = Math.round(row['Production Cost'] || 0);
-                    priceDict[lot] = {name: row.name, price: price, productionCost: productionCost};
+                    priceDict[lot] = {name: row.name || 'No name', price: price, productionCost: productionCost};
                 }
             });
         }

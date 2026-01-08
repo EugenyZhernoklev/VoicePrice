@@ -23,6 +23,7 @@
         #modalContent { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; text-align: center; }
         #closeModal { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         #exampleImage { max-width: 100%; height: auto; }
+        select { padding: 10px; margin: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -40,12 +41,11 @@
     </label>
     <button onclick="vibrate(); startListening()">Начать прослушивание</button>
     <button onclick="vibrate(); stopListening()">Остановить</button>
-    <button onclick="vibrate(); testMicrophone()">Тест микрофона</button>
     <p id="status">Статус: Загрузи прайс</p>
     <div id="lotDisplay">Название лота появится здесь</div>
 
     <footer>
-        Разработано UGN, версия 1.26
+        Разработано UGN, версия 1.25
         <img id="logo" src="logo.png" alt="Optimum Logo">
     </footer>
 
